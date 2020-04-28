@@ -161,7 +161,7 @@ class Covid19:
             fdwn = wget.download('https://covid19.isciii.es/resources/serie_historica_acumulados.csv')
             print(" ")
         else:
-            orig_file = "../isciii_files/"+self.end_report_date.replace("-", "")+"_serie_historica_acumulados.csv"
+            orig_file = "./isciii_files/"+self.end_report_date.replace("-", "")+"_serie_historica_acumulados.csv"
             dest_file = "./serie_historica_acumulados.csv"
             copyfile(orig_file, dest_file)
 
@@ -230,11 +230,11 @@ class Covid19:
 
               #np.sum(data_sp[data_sp['fecha'] == day.strftime("%d/%m/%Y")]['casos'])
 
-        #elif self.region == 'CT':
-        #    conf_acum  = data_sp[data_sp['ccaa'] == 'ct']['casos']
-        #    hosp_acum  = data_sp[data_sp['ccaa'] == 'ct']['hospitalizados']
-        #    uci_acum   = data_sp[data_sp['ccaa'] == 'ct']['uci']
-        #    death_acum = data_sp[data_sp['ccaa'] == 'ct']['fallecidos']
+        elif self.region == 'CT':
+            conf_acum  = np.array(data_sp[data_sp['ccaa'] == 'ct']['casos'])
+            hosp_acum  = np.array(data_sp[data_sp['ccaa'] == 'ct']['hospitalizados'])
+            uci_acum   = np.array(data_sp[data_sp['ccaa'] == 'ct']['uci'])
+            death_acum = np.array(data_sp[data_sp['ccaa'] == 'ct']['fallecidos'])
         # -----------------------------------------------------------------------------------------
 
         # Interpolate accumulated data,
@@ -753,13 +753,26 @@ class Covid19:
                                 'I0'        : pos[8]*100000}
 
 # Main function to organise the data processign and plotting
-def main():
+def main(Region="ALL", ReportDate="Today", CalDate=None):
+
+    # Check Report Date
+    if ReportDate == "Today":
+        day_report = dt.datetime.today()
+        report_dt  = dt.datetime.strftime(day_report, "%Y-%m-%d")
+    else:
+        day_report = dt.datetime.strptime(ReportDate, "%Y-%m-%d")
+        report_dt  = ReportDate
+
+    # Default califration day is two days before report date
+    if CalDate == None:
+        day_cal = day_report - dt.timedelta(2)
+        cal_dt  = dt.datetime.strftime(day_cal, "%Y-%m-%d")
 
     # Create the Covid Class object
-    covid = Covid19(Region="ALL", \
+    covid = Covid19(Region=Region, \
                     end_sim    = "2020-06-27", \
-                    report_date= "2020-04-27", \
-                    cal_date   = "2020-04-24", \
+                    report_date= report_dt, \
+                    cal_date   = cal_dt, \
                     w_death    = 1.0, \
                     w_uci      = 2.00, \
                     w_hosp     = 0.28)

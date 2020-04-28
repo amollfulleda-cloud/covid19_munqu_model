@@ -6,13 +6,26 @@ https://covid19.webs.upv.es/
 The covid-19 data for Spain is taken from:
 https://covid19.isciii.es/
 
-Usage: from ipython run: 
+1) FILES:
+- covid19_model.py
+- serie_historica_acumulados.csv: Data downloaded
+- isciii_file:                    Folder containing downloaded data on different days
+- Spain_covid_plots.html:         Example of generated picture
+
+2) USAGE:
+from a python environment run: 
+
 import covid19_model
 covid19_model.main()
 
-Original model rakes data on 2020-04-27. 
+It is possible to indicate the date of the reported data
+covid19_model.main("2020-04-26")
 
-Assumption for future data:
+3) KNOWN Issues
+
+Analysis per region in Spain is not operative.
+
+4) Assumption for future data:
 
 * Simulation is run un end of June
 * Start of quarentene is assumed on 2020-03-16
