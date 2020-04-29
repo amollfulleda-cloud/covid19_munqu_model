@@ -14,7 +14,7 @@ import bokeh.plotting as bplot
 from bokeh.io import output_file, show
 from bokeh.palettes import Category10
 from bokeh.layouts import gridplot, column
-from bokeh.models import Div
+from bokeh.models import Div, VArea
 
 class Covid19:
     def __init__(self, Region="SPAIN", end_sim="2020-06-30", report_date="2020-04-23", cal_date="2020-04-22", w_death=1.0, w_uci=2.0, w_hosp=0.28):
@@ -752,6 +752,117 @@ class Covid19:
                                 'L0'        : pos[7]*100000,
                                 'I0'        : pos[8]*100000}
 
+    # MODEL_SENSITIVITY
+    # Given a model defined on MODEL_PARAM
+    # moves each parameter +/-5% and extract the lower
+    # and upper bound of each curve of itereset:
+    # Infected, Hospitalized, at UCI, Deaths and Recovered.
+    def model_sensitivity(self):
+
+        beta_pre_vec  = [self.model_param_cal['beta_pre']*0.95,  self.model_param_cal['beta_pre']*1.05]
+        beta_post_vec = [self.model_param_cal['beta_post']*0.95, self.model_param_cal['beta_post']*1.05]
+        delta_vec     = [self.model_param_cal['delta']*0.95,     self.model_param_cal['delta']*1.05]
+        p1_vec        = [self.model_param_cal['p1']*0.95,  self.model_param_cal['p1']*1.05]
+        p2_vec        = [self.model_param_cal['p2']*0.95,  self.model_param_cal['p2']*1.05]
+        p3_vec        = [self.model_param_cal['p3']*0.95,  self.model_param_cal['p3']*1.05]
+        p4_vec        = [self.model_param_cal['p4']*0.95,  self.model_param_cal['p4']*1.05]
+        L0_vec        = [self.model_param_cal['L0']*0.95,  self.model_param_cal['L0']*1.05]
+        I0_vec        = [self.model_param_cal['I0']*0.95,  self.model_param_cal['I0']*1.05]
+
+
+        # Get reported model in measurable interval
+        # -----------------------------------------------------
+        start_date = np.datetime64(self.start_sim_date)
+        end_date   = np.datetime64(self.end_sim_date)
+        num_days   = int((end_date - start_date+1)/np.timedelta64(1, 'D'))
+
+        date_vec = np.array(start_date, dtype=np.datetime64) + np.arange(num_days)
+        vlen     = len(date_vec)
+
+        npoints  = pow(2, 9)
+        ir_mat   = np.zeros((npoints, vlen))
+
+        l_mat    = np.zeros((npoints, vlen))
+        i_mat    = np.zeros((npoints, vlen))
+        h_mat    = np.zeros((npoints, vlen))
+        u_mat    = np.zeros((npoints, vlen))
+        d_mat    = np.zeros((npoints, vlen))
+        r_mat    = np.zeros((npoints, vlen))
+        hu_mat   = np.zeros((npoints, vlen))
+        ind      = 0
+        for beta_pre_val in beta_pre_vec:
+            for beta_post_val in beta_post_vec:
+                for delta_val in delta_vec:
+                    for p1_val in p1_vec:
+                        for p2_val in p2_vec:
+                            for p3_val in p3_vec:
+                                for p4_val in p4_vec:
+                                    for L0_val in L0_vec:
+                                        for I0_val in I0_vec:
+                                            model_param = {
+                                                'beta_pre'  : beta_pre_val  ,
+                                                'beta_post' : beta_post_val  ,
+                                                'delta'     : delta_val  ,
+                                                'p1'        : p1_val,
+                                                'p2'        : p2_val,
+                                                'p3'        : p3_val,
+                                                'p4'        : p4_val,
+                                                'L0'        : L0_val,
+                                                'I0'        : I0_val}
+
+
+                                            lr, ir, hr, ur, dr, rr, hur, dtr = self.run_model(model_param, \
+                                                                                              self.start_sim_date, \
+                                                                                              self.end_sim_date)
+
+                                            l_mat[ind][:]  = lr
+                                            i_mat[ind][:]  = ir
+                                            h_mat[ind][:]  = hr
+                                            u_mat[ind][:]  = ur
+                                            d_mat[ind][:]  = dr
+                                            r_mat[ind][:]  = rr
+                                            hu_mat[ind][:] = hur
+
+                                            # Update counter
+                                            ind += 1
+
+        lr_min  = l_mat.min(axis=0)
+        ir_min  = i_mat.min(axis=0)
+        hr_min  = h_mat.min(axis=0)
+        ur_min  = u_mat.min(axis=0)
+        dr_min  = d_mat.min(axis=0)
+        rr_min  = r_mat.min(axis=0)
+        hur_min = hu_mat.min(axis=0)
+
+        lr_max  = l_mat.max(axis=0)
+        ir_max  = i_mat.max(axis=0)
+        hr_max  = h_mat.max(axis=0)
+        ur_max  = u_mat.max(axis=0)
+        dr_max  = d_mat.max(axis=0)
+        rr_max  = r_mat.max(axis=0)
+        hur_max = hu_mat.max(axis=0)
+
+        # Acumulados Infectados
+        self.pIa.varea(x=date_vec, y1=np.cumsum(lr_min)/5.2, y2=np.cumsum(lr_max)/5.2, fill_color="orange", fill_alpha=0.2)
+
+        # Total Infectados nuevos por dia
+        self.pId.varea(x=date_vec, y1=ir_min, y2=ir_max, fill_color="orange", fill_alpha=0.2)
+
+        # Total Hospitalizados por día
+        gamma2 = self.model_param_cal['p1']/5.8
+        self.pHd.varea(x=date_vec, y1=np.cumsum(ir_min*gamma2), y2=np.cumsum(ir_max*gamma2), fill_color='orange', fill_alpha=0.2)
+
+        # Total Fallecidos por día
+        self.pFa.varea(x=date_vec, y1=dr_min, y2=dr_max, fill_color="orange", fill_alpha=0.2)
+
+        # Total Recuperados por día
+        self.pRa.varea(x=date_vec, y1=rr_min, y2=rr_max, fill_color="orange", fill_alpha=0.2)
+
+        # Total en UCI por día
+        gamma3 = (1 - self.model_param_cal['p4'])/14
+        self.pUd.varea(x=date_vec, y1=np.cumsum(hr_min*gamma3), y2=np.cumsum(hr_max*gamma3), fill_color='orange', fill_alpha=0.2)
+
+
 # Main function to organise the data processign and plotting
 def main(Region="ALL", ReportDate="Today", CalDate=None, CalModel=None):
 
@@ -774,8 +885,8 @@ def main(Region="ALL", ReportDate="Today", CalDate=None, CalModel=None):
                     report_date= report_dt, \
                     cal_date   = cal_dt, \
                     w_death    = 1.0, \
-                    w_uci      = 2.00, \
-                    w_hosp     = 0.28)
+                    w_uci      = 2.20, \
+                    w_hosp     = 0.30)
 
     # Read Reported data
     covid.read_covid_data_sp()
@@ -786,6 +897,9 @@ def main(Region="ALL", ReportDate="Today", CalDate=None, CalModel=None):
 
     # Run Model With calibrated parameters
     covid.run_model()
+
+    # Sensitivity analysis
+    covid.model_sensitivity()
 
     # Plot Model
     covid.plot_model()
