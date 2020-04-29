@@ -24,15 +24,15 @@ class Covid19:
 
         # Keep calibrated parameters model
         # ---------------------------------------------------------------------
-        self.model_param_cal = {'beta_pre'  : 0.64,
-                                'beta_post' : 0.12,
-                                'delta'     : 0.9770,
-                                'p1'        : 0.0228,
-                                'p2'        : 0.1130,
-                                'p3'        : 0.1930,
-                                'p4'        : 0.4490,
-                                'L0'        : 12833,
-                                'I0'        : 14329}
+        self.model_param_cal = {'beta_pre'  : 0.63,
+                                'beta_post' : 0.15,
+                                'delta'     : 0.9800,
+                                'p1'        : 0.0309,
+                                'p2'        : 0.1000,
+                                'p3'        : 0.1516,
+                                'p4'        : 0.5159,
+                                'L0'        : 14503,
+                                'I0'        : 9199}
 
         # ---------------------------------------------------------------------
 
@@ -59,13 +59,13 @@ class Covid19:
 
         self.quarentene_end_1st_people = 0.05
         self.quarentene_end_2nd_people = 0.05
-        self.quarentene_end_3rd_people = 0.10
-        self.quarentene_end_4rd_people = 0.10
+        self.quarentene_end_3rd_people = 0.3
+        self.quarentene_end_4rd_people = 0.3
 
         beta_pre  = self.model_param_cal['beta_pre']
         beta_post = self.model_param_cal['beta_post']
 
-        self.quarentene_end_3rd_beta   = beta_post #(beta_pre+beta_post)/2.0
+        self.quarentene_end_3rd_beta   = (beta_pre+beta_post)/2.0
         # ---------------------------------------------------------------------
 
         # CALIBRATION PArameters
@@ -753,7 +753,7 @@ class Covid19:
                                 'I0'        : pos[8]*100000}
 
 # Main function to organise the data processign and plotting
-def main(Region="ALL", ReportDate="Today", CalDate=None):
+def main(Region="ALL", ReportDate="Today", CalDate=None, CalModel=None):
 
     # Check Report Date
     if ReportDate == "Today":
@@ -781,7 +781,8 @@ def main(Region="ALL", ReportDate="Today", CalDate=None):
     covid.read_covid_data_sp()
 
     # Calibrate Model
-    covid.swarm_cal()
+    if CalModel == "Yes":
+        covid.swarm_cal()
 
     # Run Model With calibrated parameters
     covid.run_model()
